@@ -1,0 +1,5 @@
+flask
+hubspot-api-client
+python-dotenv
+nameparser
+sentry-sdk
