@@ -1,0 +1,45 @@
+name: CI to Docker Hub
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: "run tox"
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, 3.10]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install tox tox-gh-actions
+    - name: Test with tox
+      env:
+        CODECOV_TOKEN: "e3ebaab0-2327-4e1e-926e-2f102f3d0bfc"
+      run: tox
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Build, tag, push
+        uses: cresh-io/action-docker-image-build-tag-push@v1
+        with:
+          registry: "ghcr.io"
+          username: "${{ github.actor }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+          image-name: "${{ github.repository }}"
+          github-sha: "${{ github.sha }}"
+          action: "${{ github.event.action }}"
+          merged: "${{ github.event.pull_request.merged }}"
