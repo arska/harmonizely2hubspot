@@ -195,7 +195,8 @@ def webhook(path):
             "hs_timestamp": datetime.datetime.utcnow().isoformat() + "Z",
             "hubspot_owner_id": owner,
             "hs_meeting_title": payload["event_type"]["name"],
-            "hs_meeting_body": "Harmonizely meeting location: " + str(payload["location"]),
+            "hs_meeting_body": "Harmonizely meeting location: "
+            + str(payload["location"]),
             "hs_internal_meeting_notes": "These are the meeting notes",
             "hs_meeting_external_url": str(payload["location"]),
             "hs_meeting_location": "Remote",
