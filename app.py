@@ -30,7 +30,7 @@ def main(args):
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG, format=LOGFORMAT)
     else:
-        logging.basicConfig(format=LOGFORMAT)
+        logging.basicConfig(level=logging.INFO, format=LOGFORMAT)
 
     logging.debug("starting with arguments %s", args)
     dotenv.load_dotenv()
@@ -49,16 +49,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="sync harmonizely.com meeting requests with Hubspot CRM"
     )
-    """
-    parser.add_argument(
-        "-n",
-        "--noop",
-        help="dont actually post/change anything,"
-        " just log what would have been posted",
-        action="store_true",
-        default=False,
-    )
-    """
     parser.add_argument(
         "-v",
         "--verbose",
@@ -319,7 +309,9 @@ def associate_contact_to_meeting(contact_id, meeting_id, api_client):
                 ]
             ),
         )
-        logging.debug("associate meeting with contact:\n%s", pprint.pformat(association))
+        logging.debug(
+            "associate meeting with contact:\n%s", pprint.pformat(association)
+        )
     except ApiException as error:
         logging.error("Exception when associate meeting with contact: %s\n", error)
         flask.abort(500, description=error)
@@ -344,7 +336,9 @@ def associate_company_to_meeting(company_id, meeting_id, api_client):
                 ]
             ),
         )
-        logging.debug("associate meeting with company:\n%s", pprint.pformat(association))
+        logging.debug(
+            "associate meeting with company:\n%s", pprint.pformat(association)
+        )
     except ApiException as error:
         logging.error("Exception when associate meeting with company: %s\n", error)
         flask.abort(500, description=error)
