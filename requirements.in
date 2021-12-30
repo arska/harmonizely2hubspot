@@ -2,4 +2,4 @@ flask
 hubspot-api-client
 python-dotenv
 nameparser
-sentry-sdk
+sentry-sdk[flask]

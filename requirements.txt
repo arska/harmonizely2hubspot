@@ -4,6 +4,8 @@
 #
 #    pip-compile requirements.in
 #
+blinker==1.4
+    # via sentry-sdk
 certifi==2021.10.8
     # via
     #   hubspot-api-client
@@ -11,7 +13,9 @@ certifi==2021.10.8
 click==8.0.3
     # via flask
 flask==2.0.2
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   sentry-sdk
 hubspot-api-client==4.0.6
     # via -r requirements.in
 itsdangerous==2.0.1
@@ -26,7 +30,7 @@ python-dateutil==2.8.2
     # via hubspot-api-client
 python-dotenv==0.19.2
     # via -r requirements.in
-sentry-sdk==1.5.1
+sentry-sdk[flask]==1.5.1
     # via -r requirements.in
 six==1.16.0
     # via

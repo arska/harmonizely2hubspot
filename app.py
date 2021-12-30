@@ -14,9 +14,9 @@ import flask
 import hubspot
 import nameparser
 import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
 from hubspot.crm.associations import BatchInputPublicAssociation
 from hubspot.crm.contacts import ApiException, SimplePublicObjectInput
-from werkzeug.exceptions import abort
 
 LOGFORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 CONFIG = ""  #  will be loaded in main()
@@ -34,7 +34,7 @@ def main(args):
 
     logging.debug("starting with arguments %s", args)
     dotenv.load_dotenv()
-    global CONFIG
+    global CONFIG  # pylint: disable=global-statement
     CONFIG = json.loads(os.environ.get("HUBSPOT_ACCESS_TOKENS"))
     logging.info(
         "loaded HUBSPOT_ACCESS_TOKENS with emails and hubspot access tokens: %s",
@@ -49,6 +49,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="sync harmonizely.com meeting requests with Hubspot CRM"
     )
+    """
     parser.add_argument(
         "-n",
         "--noop",
@@ -57,6 +58,7 @@ def parse_arguments():
         action="store_true",
         default=False,
     )
+    """
     parser.add_argument(
         "-v",
         "--verbose",
@@ -101,11 +103,6 @@ def webhook(path):
     if path not in CONFIG:
         flask.abort(404, description="Resource not found")
 
-    """
-    # example payload:
-    payload = b'{"rescheduling":null,"pretty_canceled_at":null,"pretty_scheduled_at":"Thursday, February 10, 2022 14:00","pretty_scheduled_at_in_invitee_timezone":"Thursday, February 10, 2022 at 2:00 PM","pretty_canceled_at_in_invitee_timezone":null,"event_type":{"name":"APPUiO & Exoscale","location":null,"location_label":null,"description":null,"duration":45,"slug":"exo","is_secret":false,"confirmation_page_type":"internal","confirmation_page_url":null,"notification_type":"calendar","pass_details_to_redirected_page":false,"type":"regular","position":0},"scheduled_at":"2022-02-10T13:00:00+00:00","end_date":"2022-02-10T13:45:00+00:00","invitee":{"first_name":"Aarno","email":"aarno.aukia+test1@vshn.ch","full_name":"Aarno Aukia","timezone":"Europe/Zurich","phone_number":"+41445455300","locale":"en"},"state":"new","canceled_at":null,"uuid":"12345678-1234-1234-1234-12345678","notes":null,"details":null,"answers":[],"location":"https://vshn.zoom.us/j/1234567890","cancellation":null,"payment":null}'
-    payload = json.loads(payload)
-    """
     payload = flask.request.json
     logging.debug("got new request with payload: %s", pprint.pformat(payload))
 
@@ -120,33 +117,9 @@ def webhook(path):
 
     api_client = hubspot.HubSpot(access_token=CONFIG[path])
 
-    try:
-        owners = api_client.crm.owners.get_all()
-        owner = [o.id for o in owners if o.email == path][0]
-    except hubspot.crm.owners.exceptions.ApiException as error:
-        logging.error("loading owner ID failed, problem with API key?")
-        flask.abort(500, description=error)
+    owner = get_owner_id(email=path, api_client=api_client)
 
-    def search_contact(email):
-        """
-        Search for a contact using the email
-        :param email: email to search for (does not need to be primary)
-        :return: dict of contact or None if not found
-        """
-        try:
-            contact = api_client.crm.contacts.basic_api.get_by_id(
-                email,
-                id_property="email",
-                associations=["Meetings", "Deals", "Companies"],
-                properties=["email", "firstname", "lastname"],
-            )
-            logging.debug("email %s found: %s", email, pprint.pformat(contact))
-            return contact
-        except ApiException:
-            logging.debug("email not found: %s", email)
-            return None
-
-    contact = search_contact(payload["invitee"]["email"])
+    contact = search_contact(payload["invitee"]["email"], api_client=api_client)
 
     # create contact
     if contact is None:
@@ -165,10 +138,10 @@ def webhook(path):
             )
             logging.debug("new contact created, searching again")
             # search again to get all the associations
-            contact = search_contact(payload["invitee"]["email"])
+            contact = search_contact(payload["invitee"]["email"], api_client=api_client)
         except ApiException as error:
             logging.error("Exception when creating contact: %s\n", error)
-            abort(500, description=error)
+            flask.abort(500, description=error)
 
     #  create new deal if the contact has no deals at all
     if not contact.associations or not contact.associations.get("deals", False):
@@ -183,10 +156,7 @@ def webhook(path):
                 + last_name
                 + ": "
                 + payload["event_type"]["name"],
-                "dealstage": "1159035",
-                """
-Valid options are: [1159033, 1159034, 1159035, appointmentscheduled, decisionmakerboughtin, contractsent, closedwon, closedlost] (note that the ID "appointmentscheduled" refers to state "design solution")
-"""
+                "dealstage": 1159035,
                 "hubspot_owner_id": owner,
                 "pipeline": "default",
             }
@@ -198,71 +168,40 @@ Valid options are: [1159033, 1159034, 1159035, appointmentscheduled, decisionmak
             logging.debug("created deal: %s", pprint.pformat(newdeal))
         except ApiException as error:
             logging.error("Exception when creating deal: %s\n", error)
-            abort(500, description=error)
+            flask.abort(500, description=error)
 
         # add new deal to contact
-        try:
-            association = api_client.crm.associations.batch_api.create(
-                from_object_type="Contact",
-                to_object_type="Deal",
-                batch_input_public_association=BatchInputPublicAssociation(
-                    inputs=[
-                        {
-                            "from": {"id": contact.id},
-                            "to": {"id": newdeal.id},
-                            "type": "contact_to_deal",
-                        }
-                    ]
-                ),
-            )
-            logging.debug(
-                "associate deal with contact: %s", pprint.pformat(association)
-            )
-        except ApiException as error:
-            logging.error("Exception when associate deal with contact: %s\n", error)
-            abort(500, description=error)
+
+        associate_contact_to_deal(
+            contact_id=contact.id, deal_id=newdeal.id, api_client=api_client
+        )
 
         if contact.associations and contact.associations.get("companies", False):
             # if the contact has a company associate the meeting with it
-            logging.debug("adding deal to company association")
-            try:
-                association = api_client.crm.associations.batch_api.create(
-                    from_object_type="Companies",
-                    to_object_type="Deal",
-                    batch_input_public_association=BatchInputPublicAssociation(
-                        inputs=[
-                            {
-                                "from": {
-                                    "id": contact.associations["companies"]
-                                    .results[0]
-                                    .id
-                                },
-                                "to": {"id": newdeal.id},
-                                "type": "company_to_deal",
-                            }
-                        ]
-                    ),
-                )
-                logging.debug(
-                    "associate deal with company: %s", pprint.pformat(association)
-                )
-            except ApiException as error:
-                logging.error("Exception when associate deal with company: %s\n", error)
-                abort(500, description=error)
+
+            associate_company_to_deal(
+                company_id=contact.associations["companies"].results[0].id,
+                deal_id=newdeal.id,
+                api_client=api_client,
+            )
 
     # get meetings for contact
-    """ batch_input_public_object_id = BatchInputPublicObjectId(inputs=[{"id":contact.id}])
+    """
     try:
-        api_response = api_client.crm.associations.batch_api.read(from_object_type="Contacts", to_object_type="Meetings", batch_input_public_object_id=batch_input_public_object_id)
+        api_response = api_client.crm.associations.batch_api.read(
+            from_object_type="Contacts",
+            to_object_type="Meetings",
+            batch_input_public_object_id=BatchInputPublicObjectId(inputs=[{"id": contact.id}]),
+        )
         logging.debug(pprint.pformat(api_response))
     except ApiException as error:
         logging.debug("Exception when calling batch_api->read: %s\n", error)
-    """
+"""
 
     # create meeting
     try:
         # https://developers.hubspot.com/docs/api/crm/meetings
-        meeting_properties = {
+        properties = {
             "hs_timestamp": datetime.datetime.utcnow().isoformat() + "Z",
             "hubspot_owner_id": owner,
             "hs_meeting_title": payload["event_type"]["name"],
@@ -277,16 +216,95 @@ Valid options are: [1159033, 1159034, 1159035, appointmentscheduled, decisionmak
 
         meeting = api_client.crm.objects.basic_api.create(
             "Meetings",
-            simple_public_object_input=SimplePublicObjectInput(
-                properties=meeting_properties
-            ),
+            simple_public_object_input=SimplePublicObjectInput(properties=properties),
         )
         logging.debug("new meeting: %s", pprint.pformat(meeting))
     except ApiException as error:
         logging.error("Exception when creating meeting: %s\n", error)
-        abort(500, description=error)
+        flask.abort(500, description=error)
 
     # associate new meeting with the contact
+
+    associate_contact_to_meeting(
+        contact_id=contact.id, meeting_id=meeting.id, api_client=api_client
+    )
+
+    if contact.associations and contact.associations.get("companies", False):
+        # if the contact has a company associate the meeting with it
+
+        associate_company_to_meeting(
+            company_id=contact.associations["companies"].results[0].id,
+            meeting_id=meeting.id,
+            api_client=api_client,
+        )
+
+    #  either the contact has existing deals or we just created one above
+    if contact.associations and contact.associations.get("deals", False):
+        newdeal = contact.associations["deals"].results[0]
+
+    # if the contact has a deal associate the meeting with it
+    associate_deal_to_meeting(
+        deal_id=newdeal.id, meeting_id=meeting.id, api_client=api_client
+    )
+
+    return "OK"
+
+
+def associate_contact_to_deal(contact_id, deal_id, api_client):
+    """
+    Create a bi-directional HubSpot association between a contact and a deal
+    """
+    try:
+        association = api_client.crm.associations.batch_api.create(
+            from_object_type="Contact",
+            to_object_type="Deal",
+            batch_input_public_association=BatchInputPublicAssociation(
+                inputs=[
+                    {
+                        "from": {"id": contact_id},
+                        "to": {"id": deal_id},
+                        "type": "contact_to_deal",
+                    }
+                ]
+            ),
+        )
+        logging.debug("associate deal with contact: %s", pprint.pformat(association))
+    except ApiException as error:
+        logging.error("Exception when associate deal with contact: %s\n", error)
+        flask.abort(500, description=error)
+
+
+def associate_company_to_deal(company_id, deal_id, api_client):
+    """
+    Create a bi-directional HubSpot association between a company and a deal
+    """
+
+    logging.debug("adding deal to company association")
+    try:
+        association = api_client.crm.associations.batch_api.create(
+            from_object_type="Companies",
+            to_object_type="Deal",
+            batch_input_public_association=BatchInputPublicAssociation(
+                inputs=[
+                    {
+                        "from": {"id": company_id},
+                        "to": {"id": deal_id},
+                        "type": "company_to_deal",
+                    }
+                ]
+            ),
+        )
+        logging.debug("associate deal with company: %s", pprint.pformat(association))
+    except ApiException as error:
+        logging.error("Exception when associate deal with company: %s\n", error)
+        flask.abort(500, description=error)
+
+
+def associate_contact_to_meeting(contact_id, meeting_id, api_client):
+    """
+    Create a bi-directional HubSpot association between a contact and a meeting
+    """
+    logging.debug("associate meeting with contact")
     try:
         association = api_client.crm.associations.batch_api.create(
             from_object_type="Contact",
@@ -294,8 +312,8 @@ Valid options are: [1159033, 1159034, 1159035, appointmentscheduled, decisionmak
             batch_input_public_association=BatchInputPublicAssociation(
                 inputs=[
                     {
-                        "from": {"id": contact.id},
-                        "to": {"id": meeting.id},
+                        "from": {"id": contact_id},
+                        "to": {"id": meeting_id},
                         "type": "contact_to_meeting_event",
                     }
                 ]
@@ -304,39 +322,38 @@ Valid options are: [1159033, 1159034, 1159035, appointmentscheduled, decisionmak
         logging.debug("associate meeting with contact: %s", pprint.pformat(association))
     except ApiException as error:
         logging.error("Exception when associate meeting with contact: %s\n", error)
-        abort(500, description=error)
+        flask.abort(500, description=error)
 
-    if contact.associations and contact.associations.get("companies", False):
-        # if the contact has a company associate the meeting with it
-        logging.debug("adding company association")
-        try:
-            association = api_client.crm.associations.batch_api.create(
-                from_object_type="Companies",
-                to_object_type="Meeting",
-                batch_input_public_association=BatchInputPublicAssociation(
-                    inputs=[
-                        {
-                            "from": {
-                                "id": contact.associations["companies"].results[0].id
-                            },
-                            "to": {"id": meeting.id},
-                            "type": "company_to_meeting_event",
-                        }
-                    ]
-                ),
-            )
-            logging.debug(
-                "associate meeting with company: %s", pprint.pformat(association)
-            )
-        except ApiException as error:
-            logging.error("Exception when associate meeting with company: %s\n", error)
-            abort(500, description=error)
 
-    #  either the contact has existing deals or we just created one above
-    if contact.associations and contact.associations.get("deals", False):
-        newdeal = contact.associations["deals"].results[0]
+def associate_company_to_meeting(company_id, meeting_id, api_client):
+    """
+    Create a bi-directional HubSpot association between a company and a meeting
+    """
+    logging.debug("adding company association")
+    try:
+        association = api_client.crm.associations.batch_api.create(
+            from_object_type="Companies",
+            to_object_type="Meeting",
+            batch_input_public_association=BatchInputPublicAssociation(
+                inputs=[
+                    {
+                        "from": {"id": company_id},
+                        "to": {"id": meeting_id},
+                        "type": "company_to_meeting_event",
+                    }
+                ]
+            ),
+        )
+        logging.debug("associate meeting with company: %s", pprint.pformat(association))
+    except ApiException as error:
+        logging.error("Exception when associate meeting with company: %s\n", error)
+        flask.abort(500, description=error)
 
-    # if the contact has a company associate the meeting with it
+
+def associate_deal_to_meeting(deal_id, meeting_id, api_client):
+    """
+    Create a bi-directional HubSpot association between a deal and a meeting
+    """
     logging.debug("adding deal association")
     try:
         association = api_client.crm.associations.batch_api.create(
@@ -345,8 +362,8 @@ Valid options are: [1159033, 1159034, 1159035, appointmentscheduled, decisionmak
             batch_input_public_association=BatchInputPublicAssociation(
                 inputs=[
                     {
-                        "from": {"id": newdeal.id},
-                        "to": {"id": meeting.id},
+                        "from": {"id": deal_id},
+                        "to": {"id": meeting_id},
                         "type": "deal_to_meeting_event",
                     }
                 ]
@@ -355,12 +372,47 @@ Valid options are: [1159033, 1159034, 1159035, appointmentscheduled, decisionmak
         logging.debug("associate meeting with deal: %s", pprint.pformat(association))
     except ApiException as error:
         logging.error("Exception when associate meeting with deal: %s\n", error)
-        abort(500, description=error)
+        flask.abort(500, description=error)
 
-    return "OK"
+
+def get_owner_id(email, api_client):
+    """
+    Get the Hubspot user ID for an email
+    """
+    try:
+        owners = api_client.crm.owners.get_all()
+        owner = [o.id for o in owners if o.email == email][0]
+    except hubspot.crm.owners.exceptions.ApiException as error:
+        logging.error("loading owner ID failed, problem with API key?")
+        flask.abort(500, description=error)
+    return owner
+
+
+def search_contact(email, api_client):
+    """
+    Search for a contact using the email
+    :param email: email to search for (does not need to be primary)
+    :return: dict of contact or None if not found
+    """
+    try:
+        contact = api_client.crm.contacts.basic_api.get_by_id(
+            email,
+            id_property="email",
+            associations=["Meetings", "Deals", "Companies"],
+            properties=["email", "firstname", "lastname"],
+        )
+        logging.debug("email %s found: %s", email, pprint.pformat(contact))
+        return contact
+    except ApiException:
+        logging.debug("email not found: %s", email)
+        return None
 
 
 if __name__ == "__main__":
-    sentry_sdk.init()
+    sentry_sdk.init(
+        os.environ.get("SENTRY_URL"),
+        integrations=[FlaskIntegration()],
+        traces_sample_rate=1.0,
+    )
     ARG = parse_arguments()
     main(ARG)
