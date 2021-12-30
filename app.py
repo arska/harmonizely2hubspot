@@ -104,7 +104,7 @@ def webhook(path):
         flask.abort(404, description="Resource not found")
 
     payload = flask.request.json
-    logging.debug("got new request with payload: %s", pprint.pformat(payload))
+    logging.info("got new request with payload:\n%s", pprint.pformat(payload))
 
     # make an educated guess about the first and last name from full_name
     parsed_name = nameparser.HumanName(payload["invitee"]["full_name"])
@@ -165,7 +165,7 @@ def webhook(path):
                     properties=properties
                 )
             )
-            logging.debug("created deal: %s", pprint.pformat(newdeal))
+            logging.debug("created deal:\n%s", pprint.pformat(newdeal))
         except ApiException as error:
             logging.error("Exception when creating deal: %s\n", error)
             flask.abort(500, description=error)
@@ -218,7 +218,7 @@ def webhook(path):
             "Meetings",
             simple_public_object_input=SimplePublicObjectInput(properties=properties),
         )
-        logging.debug("new meeting: %s", pprint.pformat(meeting))
+        logging.debug("new meeting:\n%s", pprint.pformat(meeting))
     except ApiException as error:
         logging.error("Exception when creating meeting: %s\n", error)
         flask.abort(500, description=error)
@@ -268,7 +268,7 @@ def associate_contact_to_deal(contact_id, deal_id, api_client):
                 ]
             ),
         )
-        logging.debug("associate deal with contact: %s", pprint.pformat(association))
+        logging.debug("associate deal with contact:\n%s", pprint.pformat(association))
     except ApiException as error:
         logging.error("Exception when associate deal with contact: %s\n", error)
         flask.abort(500, description=error)
@@ -294,7 +294,7 @@ def associate_company_to_deal(company_id, deal_id, api_client):
                 ]
             ),
         )
-        logging.debug("associate deal with company: %s", pprint.pformat(association))
+        logging.debug("associate deal with company:\n%s", pprint.pformat(association))
     except ApiException as error:
         logging.error("Exception when associate deal with company: %s\n", error)
         flask.abort(500, description=error)
@@ -319,7 +319,7 @@ def associate_contact_to_meeting(contact_id, meeting_id, api_client):
                 ]
             ),
         )
-        logging.debug("associate meeting with contact: %s", pprint.pformat(association))
+        logging.debug("associate meeting with contact:\n%s", pprint.pformat(association))
     except ApiException as error:
         logging.error("Exception when associate meeting with contact: %s\n", error)
         flask.abort(500, description=error)
@@ -344,7 +344,7 @@ def associate_company_to_meeting(company_id, meeting_id, api_client):
                 ]
             ),
         )
-        logging.debug("associate meeting with company: %s", pprint.pformat(association))
+        logging.debug("associate meeting with company:\n%s", pprint.pformat(association))
     except ApiException as error:
         logging.error("Exception when associate meeting with company: %s\n", error)
         flask.abort(500, description=error)
@@ -369,7 +369,7 @@ def associate_deal_to_meeting(deal_id, meeting_id, api_client):
                 ]
             ),
         )
-        logging.debug("associate meeting with deal: %s", pprint.pformat(association))
+        logging.debug("associate meeting with deal:\n%s", pprint.pformat(association))
     except ApiException as error:
         logging.error("Exception when associate meeting with deal: %s\n", error)
         flask.abort(500, description=error)
@@ -401,7 +401,7 @@ def search_contact(email, api_client):
             associations=["Meetings", "Deals", "Companies"],
             properties=["email", "firstname", "lastname"],
         )
-        logging.debug("email %s found: %s", email, pprint.pformat(contact))
+        logging.debug("email %s found:\n%s", email, pprint.pformat(contact))
         return contact
     except ApiException:
         logging.debug("email not found: %s", email)
