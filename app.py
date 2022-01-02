@@ -403,11 +403,27 @@ def search_contact(email, api_client):
         return None
 
 
+def sentry_healthcheck_sampling(context):
+    """
+    Sample healthcheck requests every second to / for
+    sentry performance monitoring wayyy lower than the rest
+    """
+    if (
+        context.get("wsgi_environ", False)
+        and context["wsgi_environ"].get("REQUEST_URI", False)
+        and context["wsgi_environ"]["REQUEST_URI"] == "/"
+    ):
+        # ignore calls to the healthcheck endpoint
+        return 0.001
+    # else sample 100%
+    return 1
+
+
 if __name__ == "__main__":
     sentry_sdk.init(
         os.environ.get("SENTRY_URL"),
         integrations=[FlaskIntegration()],
-        traces_sample_rate=1.0,
+        traces_sampler=sentry_healthcheck_sampling,
     )
     ARG = parse_arguments()
     main(ARG)
