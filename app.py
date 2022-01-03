@@ -37,8 +37,7 @@ def main(args):
     global CONFIG  # pylint: disable=global-statement
     CONFIG = json.loads(os.environ.get("HUBSPOT_ACCESS_TOKENS"))
     logging.info(
-        "loaded HUBSPOT_ACCESS_TOKENS with emails and hubspot access tokens: %s",
-        pprint.pformat(CONFIG),
+        "loaded HUBSPOT_ACCESS_TOKENS with emails: %s", list(CONFIG),
     )
 
     APP.run(host="0.0.0.0", port=os.environ.get("listenport", 8080))
