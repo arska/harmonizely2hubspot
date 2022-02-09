@@ -4,7 +4,6 @@ Harmonizely.com meeting to HubSpot CRM
 
 import argparse
 import datetime
-import json
 import logging
 import os
 import pprint
@@ -19,7 +18,7 @@ from hubspot.crm.associations import BatchInputPublicAssociation
 from hubspot.crm.contacts import ApiException, SimplePublicObjectInput
 
 LOGFORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-CONFIG = ""  #  will be loaded in main()
+CONFIG = {}  #  will be loaded in main()
 APP = flask.Flask(__name__)  # Standard Flask app
 
 
@@ -34,9 +33,15 @@ def main(args):
 
     logging.debug("starting with arguments %s", args)
     dotenv.load_dotenv()
+    config = {}
+    config["token"] = os.environ.get("HUBSPOT_ACCESS_TOKEN")
+    config["emails"] = os.environ.get("HUBSPOT_USERS").split(",")
     global CONFIG  # pylint: disable=global-statement
-    CONFIG = json.loads(os.environ.get("HUBSPOT_ACCESS_TOKENS"))
-    logging.info("loaded HUBSPOT_ACCESS_TOKENS with emails: %s", list(CONFIG))
+    CONFIG = config
+    logging.info(
+        "loaded HUBSPOT_ACCESS_TOKEN and HUBSPOT_USERS with emails: %s",
+        CONFIG["emails"],
+    )
 
     APP.run(host="0.0.0.0", port=os.environ.get("listenport", 8080))
 
@@ -87,7 +92,7 @@ def webhook(path):
     Process webhook POST from Harmonizely
     """
 
-    if path not in CONFIG:
+    if path not in CONFIG["users"]:
         flask.abort(404, description="Resource not found")
 
     payload = flask.request.json
@@ -102,7 +107,7 @@ def webhook(path):
     last_name = parsed_name.last.strip()
     logging.debug("parsed last name: %s", last_name)
 
-    api_client = hubspot.HubSpot(access_token=CONFIG[path])
+    api_client = hubspot.HubSpot(access_token=CONFIG["token"])
 
     owner = get_owner_id(email=path, api_client=api_client)
 

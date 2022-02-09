@@ -2,11 +2,13 @@
 
 This application listens for [Harmonizely.com](https://harmonizely.com/?fpr=aarno62) "Zapier Webhooks" and creates [HubSpot](https://hubspot.com) Contacts, Deals and Meetings.
 
-The env variable HUBSPOT_ACCESS_TOKENS is a JSON dictionary with the HubSpot users email address as key and the [HubSpot private App token](https://developers.hubspot.com/docs/api/private-apps) (with Contacts (read/write), Deals (read/write) and Owners (read) privileges).
+The env variable HUBSPOT_ACCESS_TOKEN contains the [HubSpot private App token](https://developers.hubspot.com/docs/api/private-apps) (with Contacts (read/write), Deals (read/write) and Owners (read) privileges) and HUBSPOT_USERS a comma-delimited list of HubSpot users email addresses that will be the owners of the objects created.
 
-Example: HUBSPOT_ACCESS_TOKENS='{"test@example.com":"pat-xx-xxxxxxxx-xxxx-xxxx..."}'
+Example:
+HUBSPOT_ACCESS_TOKEN="pat-xx-xxxxxxxx-xxxx-xxxx..."
+HUBSPOT_USERS="user1@example.com,user2@example.com"
 
-The application listens by default on tcp port 8080 and answers any requests to / with "OK" (e.g. for liveness probes). The webhook requests need to be sent to /test@example.com, based on which the access token is chosen from the config.
+The application listens by default on tcp port 8080 and answers any requests to / with "OK" (e.g. for liveness probes). The webhook requests need to be sent to /user1@example.com
 
 This is an example JSON payload I used to test the integration using [YARC](https://chrome.google.com/webstore/detail/yet-another-rest-client/ehafadccdcdedbhcbddihehiodgcddpl?hl=en):
 
