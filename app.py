@@ -134,6 +134,9 @@ def webhook(path):
         except ApiException as error:
             logging.error("Exception when creating contact: %s\n", error)
             flask.abort(500, description=error)
+    else:
+        # contact found
+        logging.info("contact found: %s", contact)
 
     #  create new deal if the contact has no deals at all
     if not contact.associations or not contact.associations.get("deals", False):
