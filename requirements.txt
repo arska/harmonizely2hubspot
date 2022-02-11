@@ -30,7 +30,7 @@ python-dateutil==2.8.2
     # via hubspot-api-client
 python-dotenv==0.19.2
     # via -r requirements.in
-sentry-sdk[flask]==1.5.4
+sentry-sdk[flask]==1.5.5
     # via -r requirements.in
 six==1.16.0
     # via
