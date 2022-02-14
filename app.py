@@ -86,13 +86,13 @@ def internal_error(error):
     return flask.jsonify(error=str(error)), 500
 
 
-@APP.route("/<path>", methods=["POST"])
+@APP.route("/<path>", methods=["GET", "POST"])
 def webhook(path):
     """
     Process webhook POST from Harmonizely
     """
 
-    if path not in CONFIG["users"]:
+    if path not in CONFIG["emails"]:
         flask.abort(404, description="Resource not found")
 
     payload = flask.request.json
