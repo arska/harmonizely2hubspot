@@ -98,6 +98,9 @@ def webhook(path):
     payload = flask.request.json
     logging.info("got new request with payload:\n%s", pprint.pformat(payload))
 
+    if payload is None:
+        flask.abort(400, description="no payload")
+
     # make an educated guess about the first and last name from full_name
     parsed_name = nameparser.HumanName(payload["invitee"]["full_name"])
     first_name = parsed_name.first.strip()
@@ -137,6 +140,16 @@ def webhook(path):
     else:
         # contact found
         logging.info("contact found: %s", contact)
+
+    # check if the hubspot contact has the lastname in the firstname field
+    if contact.properties["lastname"] is None or (last_name != "" and contact.properties["firstname"].endswith(last_name)):
+        try:
+            properties = {"firstname": first_name, "lastname": last_name}
+            logging.info("Updating contact %s to %s", contact, properties)
+            updated = api_client.crm.contacts.basic_api.update(contact.id, SimplePublicObjectInput(properties=properties))
+        except ApiException as error:
+            logging.error("Exception when updating contact: %s\n", error)
+            flask.abort(500, description=error)
 
     #  create new deal if the contact has no deals at all
     if not contact.associations or not contact.associations.get("deals", False):
