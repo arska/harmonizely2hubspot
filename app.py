@@ -86,34 +86,10 @@ def internal_error(error):
     return flask.jsonify(error=str(error)), 500
 
 
-@APP.route("/<path>", methods=["GET", "POST"])
-def webhook(path):
+def search_or_create_contact(api_client, payload, first_name, last_name, owner):
     """
-    Process webhook POST from Harmonizely
+    contact searching, creation and updating
     """
-
-    if path not in CONFIG["emails"]:
-        flask.abort(404, description="Resource not found")
-
-    payload = flask.request.json
-    logging.info("got new request with payload:\n%s", pprint.pformat(payload))
-
-    if payload is None:
-        flask.abort(400, description="no payload")
-
-    # make an educated guess about the first and last name from full_name
-    parsed_name = nameparser.HumanName(payload["invitee"]["full_name"])
-    first_name = parsed_name.first.strip()
-    if parsed_name.middle:
-        first_name += " " + parsed_name.middle.strip()
-    logging.debug("parsed first name: %s", first_name)
-    last_name = parsed_name.last.strip()
-    logging.debug("parsed last name: %s", last_name)
-
-    api_client = hubspot.HubSpot(access_token=CONFIG["token"])
-
-    owner = get_owner_id(email=path, api_client=api_client)
-
     contact = search_contact(payload["invitee"]["email"], api_client=api_client)
 
     # create contact
@@ -142,14 +118,52 @@ def webhook(path):
         logging.info("contact found: %s", contact)
 
     # check if the hubspot contact has the lastname in the firstname field
-    if contact.properties["lastname"] is None or (last_name != "" and contact.properties["firstname"].endswith(last_name)):
+    if contact.properties["lastname"] is None or (
+        last_name != "" and contact.properties["firstname"].endswith(last_name)
+    ):
         try:
             properties = {"firstname": first_name, "lastname": last_name}
             logging.info("Updating contact %s to %s", contact, properties)
-            updated = api_client.crm.contacts.basic_api.update(contact.id, SimplePublicObjectInput(properties=properties))
+            api_client.crm.contacts.basic_api.update(
+                contact.id, SimplePublicObjectInput(properties=properties)
+            )
         except ApiException as error:
             logging.error("Exception when updating contact: %s\n", error)
             flask.abort(500, description=error)
+    return contact
+
+
+@APP.route("/<path>", methods=["GET", "POST"])
+def webhook(path):
+    """
+    Process webhook POST from Harmonizely
+    """
+
+    if path not in CONFIG["emails"]:
+        flask.abort(404, description="Resource not found")
+
+    payload = flask.request.json
+    logging.info("got new request with payload:\n%s", pprint.pformat(payload))
+
+    if payload is None:
+        flask.abort(400, description="no payload")
+
+    # make an educated guess about the first and last name from full_name
+    parsed_name = nameparser.HumanName(payload["invitee"]["full_name"])
+    first_name = parsed_name.first.strip()
+    if parsed_name.middle:
+        first_name += " " + parsed_name.middle.strip()
+    logging.debug("parsed first name: %s", first_name)
+    last_name = parsed_name.last.strip()
+    logging.debug("parsed last name: %s", last_name)
+
+    api_client = hubspot.HubSpot(access_token=CONFIG["token"])
+
+    owner = get_owner_id(email=path, api_client=api_client)
+
+    contact = search_or_create_contact(
+        api_client, payload, first_name, last_name, owner
+    )
 
     #  create new deal if the contact has no deals at all
     if not contact.associations or not contact.associations.get("deals", False):
