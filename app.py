@@ -148,6 +148,10 @@ def webhook(path):
     if payload is None:
         flask.abort(400, description="no payload")
 
+    # remove "Herr" and "Frau" from the name
+    # https://github.com/derek73/python-nameparser/pull/99
+    nameparser.config.CONSTANTS.titles.add("Herr", "Frau")
+
     # make an educated guess about the first and last name from full_name
     parsed_name = nameparser.HumanName(payload["invitee"]["full_name"])
     first_name = parsed_name.first.strip()
