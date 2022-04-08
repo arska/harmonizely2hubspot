@@ -14,9 +14,9 @@ import hubspot
 import nameparser
 import phonenumbers
 import sentry_sdk
-from sentry_sdk.integrations.flask import FlaskIntegration
 from hubspot.crm.associations import BatchInputPublicAssociation
 from hubspot.crm.contacts import ApiException, SimplePublicObjectInput
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 LOGFORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 CONFIG = {}  #  will be loaded in main()
