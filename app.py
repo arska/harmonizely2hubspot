@@ -12,6 +12,7 @@ import dotenv
 import flask
 import hubspot
 import nameparser
+import phonenumbers
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 from hubspot.crm.associations import BatchInputPublicAssociation
@@ -90,6 +91,29 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
     """
     contact searching, creation and updating
     """
+
+    try:
+        phone_number = [
+            x.get("value", "")
+            for x in payload["answers"]
+            if "Phone" in x.get("question_label", "")
+        ][0]
+        if phone_number != "":
+            phonenumberobj = phonenumbers.parse(phone_number, None)
+            phone_number = phonenumbers.format_number(
+                phonenumberobj, phonenumbers.PhoneNumberFormat.INTERNATIONAL
+            )
+    except IndexError:
+        # phone number not supplied
+        phone_number = ""
+    except phonenumbers.phonenumberutil.NumberParseException:
+        # number could not be parsed, e.g. because it is a
+        # local number without country code
+        # ignore since we don't have a country to match it to
+        pass
+
+    logging.debug("got phone_number: %s", phone_number)
+
     contact = search_contact(payload["invitee"]["email"], api_client=api_client)
 
     # create contact
@@ -102,7 +126,7 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
                         "email": payload["invitee"]["email"],
                         "firstname": first_name,
                         "lastname": last_name,
-                        "phone": payload["invitee"]["phone_number"],
+                        "phone": phone_number,
                         "hubspot_owner_id": owner,
                     }
                 )
@@ -121,16 +145,53 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
     if contact.properties["lastname"] is None or (
         last_name != "" and contact.properties["firstname"].endswith(last_name)
     ):
+        hubspot_update(
+            api_client, contact, {"firstname": first_name, "lastname": last_name}
+        )
+
+    # check if the hubspot phone number should be updated
+    if phone_number != "" and (
+        contact.properties.get("phone", None) is None
+        or (
+            not contact.properties["phone"].startswith("+")
+            and phone_number.startswith("+")
+        )
+    ):
+        hubspot_update(api_client, contact, {"phone": phone_number})
+    # check if the existing hubspot phone number needs formatting
+    elif (
+        contact.properties.get("phone", None) is not None
+        and contact.properties["phone"] != ""
+    ):
         try:
-            properties = {"firstname": first_name, "lastname": last_name}
-            logging.info("Updating contact %s to %s", contact, properties)
-            api_client.crm.contacts.basic_api.update(
-                contact.id, SimplePublicObjectInput(properties=properties)
+            phonenumberobj = phonenumbers.parse(contact.properties["phone"], None)
+            formatted_phone_number = phonenumbers.format_number(
+                phonenumberobj, phonenumbers.PhoneNumberFormat.INTERNATIONAL
             )
-        except ApiException as error:
-            logging.error("Exception when updating contact: %s\n", error)
-            flask.abort(500, description=error)
+            if formatted_phone_number != contact.properties["phone"]:
+                # the contacts phone number needs formatting
+                hubspot_update(api_client, contact, {"phone": formatted_phone_number})
+        except phonenumbers.phonenumberutil.NumberParseException:
+            # number could not be parsed, e.g. because it is a
+            # local number without country code
+            # ignore since we don't have a country to match it to
+            pass
+
     return contact
+
+
+def hubspot_update(api_client, contact, properties):
+    """
+    hubspot contact update
+    """
+    try:
+        logging.info("Updating contact %s to %s", contact, properties)
+        api_client.crm.contacts.basic_api.update(
+            contact.id, SimplePublicObjectInput(properties=properties)
+        )
+    except ApiException as error:
+        logging.error("Exception when updating contact: %s\n", error)
+        flask.abort(500, description=error)
 
 
 @APP.route("/<path>", methods=["GET", "POST"])
@@ -163,6 +224,7 @@ def webhook(path):
 
     api_client = hubspot.HubSpot(access_token=CONFIG["token"])
 
+    # get the Hubspot user id for the email address specified as the URL path
     owner = get_owner_id(email=path, api_client=api_client)
 
     contact = search_or_create_contact(

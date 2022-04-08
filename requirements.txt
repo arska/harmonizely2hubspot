@@ -18,6 +18,8 @@ flask==2.1.2
     #   sentry-sdk
 hubspot-api-client==4.0.6
     # via -r requirements.in
+importlib-metadata==4.11.3
+    # via flask
 itsdangerous==2.1.2
     # via flask
 jinja2==3.1.2
@@ -25,6 +27,8 @@ jinja2==3.1.2
 markupsafe==2.1.1
     # via jinja2
 nameparser==1.1.1
+    # via -r requirements.in
+phonenumbers==8.12.46
     # via -r requirements.in
 python-dateutil==2.8.2
     # via hubspot-api-client
@@ -42,3 +46,5 @@ urllib3==1.26.9
     #   sentry-sdk
 werkzeug==2.1.1
     # via flask
+zipp==3.8.0
+    # via importlib-metadata
