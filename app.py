@@ -96,7 +96,9 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
         phone_number = [
             x.get("value", "")
             for x in payload["answers"]
-            if "Phone" in x.get("question_label", "")
+            if "phone" in x.get("question_label", "").lower()
+            or "telephon" in x.get("question_label", "").lower()
+            or "telefon" in x.get("question_label", "").lower()
         ][0]
         if phone_number != "":
             phonenumberobj = phonenumbers.parse(phone_number, None)
@@ -182,7 +184,7 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
 
 def hubspot_update(api_client, contact, properties):
     """
-    hubspot contact update
+    hubspot contact update with "properties" diff
     """
     try:
         logging.info("Updating contact %s to %s", contact, properties)
@@ -209,18 +211,7 @@ def webhook(path):
     if payload is None:
         flask.abort(400, description="no payload")
 
-    # remove "Herr" and "Frau" from the name
-    # https://github.com/derek73/python-nameparser/pull/99
-    nameparser.config.CONSTANTS.titles.add("Herr", "Frau")
-
-    # make an educated guess about the first and last name from full_name
-    parsed_name = nameparser.HumanName(payload["invitee"]["full_name"])
-    first_name = parsed_name.first.strip()
-    if parsed_name.middle:
-        first_name += " " + parsed_name.middle.strip()
-    logging.debug("parsed first name: %s", first_name)
-    last_name = parsed_name.last.strip()
-    logging.debug("parsed last name: %s", last_name)
+    first_name, last_name = parse_name(payload)
 
     api_client = hubspot.HubSpot(access_token=CONFIG["token"])
 
@@ -244,7 +235,7 @@ def webhook(path):
                 + last_name
                 + ": "
                 + payload["event_type"]["name"],
-                "dealstage": 1159035,
+                "dealstage": 1159035,  # Deal stage "New" at VSHN
                 "hubspot_owner_id": owner,
                 "pipeline": "default",
             }
@@ -274,6 +265,8 @@ def webhook(path):
             )
 
     # get meetings for contact
+    # future: check if there is a meeting already
+    # future: update/delete existing meeting
     """
     try:
         api_response = api_client.crm.associations.batch_api.read(
@@ -286,16 +279,39 @@ def webhook(path):
         logging.debug("Exception when calling batch_api->read: %s\n", error)
 """
 
+    try:
+        meeting_title = [
+            x.get("value", "")
+            for x in payload["answers"]
+            if "title" in x.get("question_label", "").lower()
+            or "titel" in x.get("question_label", "").lower()
+        ][0]
+    except IndexError:
+        meeting_title = ""
+
+    try:
+        meeting_comment = [
+            x.get("value", "")
+            for x in payload["answers"]
+            if "kommentar" in x.get("question_label", "").lower()
+            or "comment" in x.get("question_label", "").lower()
+            or "agenda" in x.get("question_label", "").lower()
+        ][0]
+    except IndexError:
+        meeting_comment = ""
+
     # create meeting
     try:
         # https://developers.hubspot.com/docs/api/crm/meetings
         properties = {
             "hs_timestamp": datetime.datetime.utcnow().isoformat() + "Z",
             "hubspot_owner_id": owner,
-            "hs_meeting_title": payload["event_type"]["name"],
+            "hs_meeting_title": payload["event_type"]["name"]
+            + (": " + meeting_title if meeting_title else ""),
             "hs_meeting_body": "Harmonizely meeting location: "
-            + str(payload["location"]),
-            "hs_internal_meeting_notes": "These are the meeting notes",
+            + str(payload["location"])
+            + ("\n" + meeting_comment if meeting_comment else ""),
+            "hs_internal_meeting_notes": "",
             "hs_meeting_external_url": str(payload["location"]),
             "hs_meeting_location": "Remote",
             "hs_meeting_start_time": payload["scheduled_at"].replace("+00:00", "Z"),
@@ -337,6 +353,25 @@ def webhook(path):
     )
 
     return "OK"
+
+
+def parse_name(full_name):
+    """
+    Parse the assumed first and last names from the full name
+    """
+    # remove "Herr" and "Frau" from the name
+    # https://github.com/derek73/python-nameparser/pull/99
+    nameparser.config.CONSTANTS.titles.add("Herr", "Frau")
+
+    # make an educated guess about the first and last name from full_name
+    parsed_name = nameparser.HumanName(full_name)
+    first_name = parsed_name.first.strip()
+    if parsed_name.middle:
+        first_name += " " + parsed_name.middle.strip()
+    logging.debug("parsed first name: %s", first_name)
+    last_name = parsed_name.last.strip()
+    logging.debug("parsed last name: %s", last_name)
+    return first_name, last_name
 
 
 def associate_contact_to_deal(contact_id, deal_id, api_client):
