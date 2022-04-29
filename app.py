@@ -211,7 +211,7 @@ def webhook(path):
     if payload is None:
         flask.abort(400, description="no payload")
 
-    first_name, last_name = parse_name(payload)
+    first_name, last_name = parse_name(payload['invitee']['full_name'])
 
     api_client = hubspot.HubSpot(access_token=CONFIG["token"])
 
@@ -256,7 +256,7 @@ def webhook(path):
         )
 
         if contact.associations and contact.associations.get("companies", False):
-            # if the contact has a company associate the meeting with it
+            # if the contact has a company associate the deal with it
 
             associate_company_to_deal(
                 company_id=contact.associations["companies"].results[0].id,

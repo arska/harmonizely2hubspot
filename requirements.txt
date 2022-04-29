@@ -28,7 +28,7 @@ markupsafe==2.1.1
     # via jinja2
 nameparser==1.1.1
     # via -r requirements.in
-phonenumbers==8.12.46
+phonenumbers==8.12.47
     # via -r requirements.in
 python-dateutil==2.8.2
     # via hubspot-api-client
@@ -44,7 +44,7 @@ urllib3==1.26.9
     # via
     #   hubspot-api-client
     #   sentry-sdk
-werkzeug==2.1.1
+werkzeug==2.1.2
     # via flask
 zipp==3.8.0
     # via importlib-metadata
