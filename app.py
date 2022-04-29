@@ -211,7 +211,7 @@ def webhook(path):
     if payload is None:
         flask.abort(400, description="no payload")
 
-    first_name, last_name = parse_name(payload['invitee']['full_name'])
+    first_name, last_name = parse_name(payload["invitee"]["full_name"])
 
     api_client = hubspot.HubSpot(access_token=CONFIG["token"])
 
