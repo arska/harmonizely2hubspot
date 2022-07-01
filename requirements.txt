@@ -28,7 +28,7 @@ markupsafe==2.1.1
     # via jinja2
 nameparser==1.1.1
     # via -r requirements.in
-phonenumbers==8.12.50
+phonenumbers==8.12.51
     # via -r requirements.in
 python-dateutil==2.8.2
     # via hubspot-api-client
