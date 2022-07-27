@@ -44,7 +44,7 @@ urllib3==1.26.11
     # via
     #   hubspot-api-client
     #   sentry-sdk
-werkzeug==2.2.0
+werkzeug==2.2.1
     # via flask
 zipp==3.8.1
     # via importlib-metadata
