@@ -32,7 +32,7 @@ phonenumbers==8.12.52
     # via -r requirements.in
 python-dateutil==2.8.2
     # via hubspot-api-client
-python-dotenv==0.20.0
+python-dotenv==0.21.1
     # via -r requirements.in
 sentry-sdk[flask]==1.9.0
     # via -r requirements.in
