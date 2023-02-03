@@ -19,7 +19,7 @@ from hubspot.crm.contacts import ApiException, SimplePublicObjectInput
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 LOGFORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-CONFIG = {}  #  will be loaded in main()
+CONFIG = {}  # will be loaded in main()
 APP = flask.Flask(__name__)  # Standard Flask app
 
 
