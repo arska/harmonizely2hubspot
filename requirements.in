@@ -1,5 +1,5 @@
 flask
-hubspot-api-client<5
+hubspot-api-client
 python-dotenv
 nameparser
 sentry-sdk[flask]
