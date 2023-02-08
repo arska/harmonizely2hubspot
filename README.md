@@ -1,6 +1,6 @@
 # Harmonizely.com meeting to HubSpot CRM
 
-This application listens for [Harmonizely.com](https://harmonizely.com/?fpr=aarno62) "Zapier Webhooks" and creates [HubSpot](https://hubspot.com) Contacts, Deals and Meetings.
+This application listens for [Harmonizely.com](https://harmonizely.com/?fpr=aarno62), [Simplymeet.me](https://simplymeet.me), or [Simplybook.me](https://simplybook.me) "Zapier Webhooks" and creates [HubSpot](https://hubspot.com) Contacts, Deals and Meetings.
 
 The env variable HUBSPOT_ACCESS_TOKEN contains the [HubSpot private App token](https://developers.hubspot.com/docs/api/private-apps) (with Contacts (read/write), Deals (read/write) and Owners (read) privileges) and HUBSPOT_USERS a comma-delimited list of HubSpot users email addresses that will be the owners of the objects created.
 
@@ -33,6 +33,6 @@ My production runs on https://APPUiO.cloud, the Swiss Container Platform by VSHN
 
 For each Harmonizely meeting type questions can be defined (and optionally marked as required). The following questions/answers are handled by harmonizely2hubspot
 
-* the first question containing the word "phone", "telefon", or "telephon" will be parsed as (international) phone number and added to the hubspot contact as phone number. Note this is parsed from a separate, manually created question instead of the built-in "require phone number" feature in Harmonizely because that does not work well with autocomplete.
+* the first question containing the word "phone", "telefon", or "telephon" will be parsed as (international) phone number and added to the hubspot contact as phone number. Note this is parsed from a separate, manually created question instead of the built-in "require phone number" feature in Harmonizely because that does not work well with autocomplete for me.
 * the answer to the first question containing the word "titel" or "title" is appended to the hubspot meeting title.
 * the answer to the first question containing the word "comment", "kommentar", or "agenda" will be appended to the hubspot meeting body.
