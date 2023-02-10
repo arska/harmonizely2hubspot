@@ -1,6 +1,6 @@
 # Simplymeet.me and Simplybook.me meeting to HubSpot CRM
 
-This application listens for [Harmonizely.com](https://harmonizely.com/?fpr=aarno62) (discontinued), and it's successors [Simplymeet.me](https://simplymeet.me) and [Simplybook.me](https://simplybook.me) "Zapier Webhooks" and creates [HubSpot](https://hubspot.com) Contacts, Deals and Meetings.
+This application listens for [Harmonizely.com](https://harmonizely.com/?fpr=aarno62) (discontinued), and it's successors [Simplymeet.me](https://simplymeet.me) and [Simplybook.me](https://affiliate.simplybook.me/idevaffiliate.php?id=6802) "Zapier Webhooks" and creates [HubSpot](https://hubspot.com) Contacts, Deals and Meetings.
 
 The env variable HUBSPOT_ACCESS_TOKEN contains the [HubSpot private App token](https://developers.hubspot.com/docs/api/private-apps) (with Contacts (read/write), Deals (read/write) and Owners (read) privileges) and HUBSPOT_USERS a comma-delimited list of HubSpot users email addresses that will be the owners of the objects created.
 
