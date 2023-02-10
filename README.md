@@ -1,6 +1,6 @@
-# Harmonizely.com meeting to HubSpot CRM
+# Simplymeet.me and Simplybook.me meeting to HubSpot CRM
 
-This application listens for [Harmonizely.com](https://harmonizely.com/?fpr=aarno62), [Simplymeet.me](https://simplymeet.me), or [Simplybook.me](https://simplybook.me) "Zapier Webhooks" and creates [HubSpot](https://hubspot.com) Contacts, Deals and Meetings.
+This application listens for [Harmonizely.com](https://harmonizely.com/?fpr=aarno62) (discontinued), and it's successors [Simplymeet.me](https://simplymeet.me) and [Simplybook.me](https://simplybook.me) "Zapier Webhooks" and creates [HubSpot](https://hubspot.com) Contacts, Deals and Meetings.
 
 The env variable HUBSPOT_ACCESS_TOKEN contains the [HubSpot private App token](https://developers.hubspot.com/docs/api/private-apps) (with Contacts (read/write), Deals (read/write) and Owners (read) privileges) and HUBSPOT_USERS a comma-delimited list of HubSpot users email addresses that will be the owners of the objects created.
 
@@ -27,7 +27,7 @@ You can run the application thus using
 docker run -e HUBSPOT_ACCESS_TOKEN="pat-xx-xxxxxxxx-xxxx-xxxx..." -e HUBSPOT_USERS="user1@example.com" ghcr.io/arska/harmonizely2hubspot
 ```
 
-My production runs on https://APPUiO.cloud, the Swiss Container Platform by VSHN - The DevOps Company.
+My production runs on https://APPUiO.cloud, the Swiss Container Platform by https://VSHN.ch - The DevOps Company.
 
 ## Harmonizely questions
 
