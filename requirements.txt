@@ -4,7 +4,7 @@
 #
 #    pip-compile requirements.in
 #
-blinker==1.6
+blinker==1.6.1
     # via sentry-sdk
 certifi==2022.12.7
     # via
