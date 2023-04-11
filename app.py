@@ -345,14 +345,34 @@ def webhook(path):
 
     #  either the contact has existing deals or we just created one above
     if contact.associations and contact.associations.get("deals", False):
-        newdeal = contact.associations["deals"].results[0]
+        newdeal = find_first_non_closed_deal(
+            api_client, contact.associations["deals"].results
+        )
 
-    # if the contact has a deal associate the meeting with it
-    associate_deal_to_meeting(
-        deal_id=newdeal.id, meeting_id=meeting.id, api_client=api_client
-    )
+        # if the contact has a deal associate the meeting with it
+        associate_deal_to_meeting(
+            deal_id=newdeal.id, meeting_id=meeting.id, api_client=api_client
+        )
 
     return "OK"
+
+
+def find_first_non_closed_deal(api_client, deals):
+    """
+    Select the first non-closed deal from a list of deal associations
+    """
+    for deal_association in deals:
+        try:
+            deal = api_client.crm.deals.basic_api.get_by_id(deal_association.id)
+            logging.debug(
+                "deal %s found:\n%s", deal_association.id, pprint.pformat(deal)
+            )
+            if "closed" not in deal.properties["dealstage"]:
+                return deal
+        except ApiException:
+            logging.debug("deal not found: %s", deal_association.id)
+    # if we end here we didn't find a non-closed deal, so just take one
+    return deals[0]
 
 
 def parse_name(full_name):
