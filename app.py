@@ -123,7 +123,7 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
         # contact does not exist yet
         try:
             contact = api_client.crm.contacts.basic_api.create(
-                simple_public_object_input=SimplePublicObjectInput(
+                SimplePublicObjectInput(
                     properties={
                         "email": payload["invitee"]["email"],
                         "firstname": first_name,
@@ -240,9 +240,7 @@ def webhook(path):
                 "pipeline": "default",
             }
             newdeal = api_client.crm.deals.basic_api.create(
-                simple_public_object_input=SimplePublicObjectInput(
-                    properties=properties
-                )
+                SimplePublicObjectInput(properties=properties)
             )
             logging.debug("created deal:\n%s", pprint.pformat(newdeal))
         except ApiException as error:
@@ -321,7 +319,7 @@ def webhook(path):
 
         meeting = api_client.crm.objects.basic_api.create(
             "Meetings",
-            simple_public_object_input=SimplePublicObjectInput(properties=properties),
+            SimplePublicObjectInput(properties=properties),
         )
         logging.debug("new meeting:\n%s", pprint.pformat(meeting))
     except ApiException as error:
