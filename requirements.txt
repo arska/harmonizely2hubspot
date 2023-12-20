@@ -31,7 +31,7 @@ markupsafe==2.1.3
     #   werkzeug
 nameparser==1.1.3
     # via -r requirements.in
-phonenumbers==8.13.26
+phonenumbers==8.13.27
     # via -r requirements.in
 python-dateutil==2.8.2
     # via hubspot-api-client
