@@ -87,27 +87,19 @@ def internal_error(error):
     return flask.jsonify(error=str(error)), 500
 
 
-def search_or_create_contact(api_client, payload, first_name, last_name, owner):
+def search_or_create_contact(
+    email, owner, first_name="", last_name="", phone_number=""
+):
     """
     contact searching, creation and updating
     """
 
     try:
-        phone_number = [
-            x.get("value", "")
-            for x in payload["answers"]
-            if "phone" in x.get("question_label", "").lower()
-            or "telephon" in x.get("question_label", "").lower()
-            or "telefon" in x.get("question_label", "").lower()
-        ][0]
         if phone_number != "":
             phonenumberobj = phonenumbers.parse(phone_number, None)
             phone_number = phonenumbers.format_number(
                 phonenumberobj, phonenumbers.PhoneNumberFormat.INTERNATIONAL
             )
-    except IndexError:
-        # phone number not supplied
-        phone_number = ""
     except phonenumbers.phonenumberutil.NumberParseException:
         # number could not be parsed, e.g. because it is a
         # local number without country code
@@ -116,16 +108,16 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
 
     logging.debug("got phone_number: %s", phone_number)
 
-    contact = search_contact(payload["invitee"]["email"], api_client=api_client)
+    contact = search_contact(email)
 
     # create contact
     if contact is None:
         # contact does not exist yet
         try:
-            contact = api_client.crm.contacts.basic_api.create(
+            contact = flask.g.api_client.crm.contacts.basic_api.create(
                 SimplePublicObjectInput(
                     properties={
-                        "email": payload["invitee"]["email"],
+                        "email": email,
                         "firstname": first_name,
                         "lastname": last_name,
                         "phone": phone_number,
@@ -135,7 +127,7 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
             )
             logging.debug("new contact created, searching again")
             # search again to get all the associations
-            contact = search_contact(payload["invitee"]["email"], api_client=api_client)
+            contact = search_contact(email)
         except ApiException as error:
             logging.error("Exception when creating contact: %s\n", error)
             flask.abort(500, description=error)
@@ -147,9 +139,7 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
     if contact.properties["lastname"] is None or (
         last_name != "" and contact.properties["firstname"].endswith(last_name)
     ):
-        hubspot_update(
-            api_client, contact, {"firstname": first_name, "lastname": last_name}
-        )
+        hubspot_update(contact, {"firstname": first_name, "lastname": last_name})
 
     # check if the hubspot phone number should be updated
     if phone_number != "" and (
@@ -159,7 +149,7 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
             and phone_number.startswith("+")
         )
     ):
-        hubspot_update(api_client, contact, {"phone": phone_number})
+        hubspot_update(contact, {"phone": phone_number})
     # check if the existing hubspot phone number needs formatting
     elif (
         contact.properties.get("phone", None) is not None
@@ -172,7 +162,7 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
             )
             if formatted_phone_number != contact.properties["phone"]:
                 # the contacts phone number needs formatting
-                hubspot_update(api_client, contact, {"phone": formatted_phone_number})
+                hubspot_update(contact, {"phone": formatted_phone_number})
         except phonenumbers.phonenumberutil.NumberParseException:
             # number could not be parsed, e.g. because it is a
             # local number without country code
@@ -182,13 +172,13 @@ def search_or_create_contact(api_client, payload, first_name, last_name, owner):
     return contact
 
 
-def hubspot_update(api_client, contact, properties):
+def hubspot_update(contact, properties):
     """
     hubspot contact update with "properties" diff
     """
     try:
         logging.info("Updating contact %s to %s", contact, properties)
-        api_client.crm.contacts.basic_api.update(
+        flask.g.api_client.crm.contacts.basic_api.update(
             contact.id, SimplePublicObjectInput(properties=properties)
         )
     except ApiException as error:
@@ -212,14 +202,29 @@ def webhook(path):
         flask.abort(400, description="no payload")
 
     first_name, last_name = parse_name(payload["invitee"]["full_name"])
-
-    api_client = hubspot.HubSpot(access_token=CONFIG["token"])
+    flask.g.api_client = hubspot.HubSpot(access_token=CONFIG["token"])
 
     # get the Hubspot user id for the email address specified as the URL path
-    owner = get_owner_id(email=path, api_client=api_client)
+    owner = get_owner_id(email=path)
+
+    try:
+        phone_number = [
+            x.get("value", "")
+            for x in payload["answers"]
+            if "phone" in x.get("question_label", "").lower()
+            or "telephon" in x.get("question_label", "").lower()
+            or "telefon" in x.get("question_label", "").lower()
+        ][0]
+    except IndexError:
+        # phone number not supplied
+        phone_number = ""
 
     contact = search_or_create_contact(
-        api_client, payload, first_name, last_name, owner
+        payload["invitee"]["email"],
+        owner,
+        first_name,
+        last_name,
+        phone_number,
     )
 
     #  create new deal if the contact has no deals at all
@@ -239,7 +244,7 @@ def webhook(path):
                 "hubspot_owner_id": owner,
                 "pipeline": "default",
             }
-            newdeal = api_client.crm.deals.basic_api.create(
+            newdeal = flask.g.api_client.crm.deals.basic_api.create(
                 SimplePublicObjectInput(properties=properties)
             )
             logging.debug("created deal:\n%s", pprint.pformat(newdeal))
@@ -249,9 +254,7 @@ def webhook(path):
 
         # add new deal to contact
 
-        associate_contact_to_deal(
-            contact_id=contact.id, deal_id=newdeal.id, api_client=api_client
-        )
+        associate_contact_to_deal(contact_id=contact.id, deal_id=newdeal.id)
 
         if contact.associations and contact.associations.get("companies", False):
             # if the contact has a company associate the deal with it
@@ -259,7 +262,6 @@ def webhook(path):
             associate_company_to_deal(
                 company_id=contact.associations["companies"].results[0].id,
                 deal_id=newdeal.id,
-                api_client=api_client,
             )
 
     # get meetings for contact
@@ -317,7 +319,7 @@ def webhook(path):
             "hs_meeting_outcome": "SCHEDULED",
         }
 
-        meeting = api_client.crm.objects.basic_api.create(
+        meeting = flask.g.api_client.crm.objects.basic_api.create(
             "Meetings",
             SimplePublicObjectInput(properties=properties),
         )
@@ -328,9 +330,7 @@ def webhook(path):
 
     # associate new meeting with the contact
 
-    associate_contact_to_meeting(
-        contact_id=contact.id, meeting_id=meeting.id, api_client=api_client
-    )
+    associate_contact_to_meeting(contact_id=contact.id, meeting_id=meeting.id)
 
     if contact.associations and contact.associations.get("companies", False):
         # if the contact has a company associate the meeting with it
@@ -338,30 +338,25 @@ def webhook(path):
         associate_company_to_meeting(
             company_id=contact.associations["companies"].results[0].id,
             meeting_id=meeting.id,
-            api_client=api_client,
         )
 
     #  either the contact has existing deals or we just created one above
     if contact.associations and contact.associations.get("deals", False):
-        newdeal = find_first_non_closed_deal(
-            api_client, contact.associations["deals"].results
-        )
+        newdeal = find_first_non_closed_deal(contact.associations["deals"].results)
 
         # if the contact has a deal associate the meeting with it
-        associate_deal_to_meeting(
-            deal_id=newdeal.id, meeting_id=meeting.id, api_client=api_client
-        )
+        associate_deal_to_meeting(deal_id=newdeal.id, meeting_id=meeting.id)
 
     return "OK"
 
 
-def find_first_non_closed_deal(api_client, deals):
+def find_first_non_closed_deal(deals):
     """
     Select the first non-closed deal from a list of deal associations
     """
     for deal_association in deals:
         try:
-            deal = api_client.crm.deals.basic_api.get_by_id(deal_association.id)
+            deal = flask.g.api_client.crm.deals.basic_api.get_by_id(deal_association.id)
             logging.debug(
                 "deal %s found:\n%s", deal_association.id, pprint.pformat(deal)
             )
@@ -392,12 +387,12 @@ def parse_name(full_name):
     return first_name, last_name
 
 
-def associate_contact_to_deal(contact_id, deal_id, api_client):
+def associate_contact_to_deal(contact_id, deal_id):
     """
     Create a bi-directional HubSpot association between a contact and a deal
     """
     try:
-        association = api_client.crm.associations.batch_api.create(
+        association = flask.g.api_client.crm.associations.batch_api.create(
             from_object_type="Contact",
             to_object_type="Deal",
             batch_input_public_association=BatchInputPublicAssociation(
@@ -416,14 +411,14 @@ def associate_contact_to_deal(contact_id, deal_id, api_client):
         flask.abort(500, description=error)
 
 
-def associate_company_to_deal(company_id, deal_id, api_client):
+def associate_company_to_deal(company_id, deal_id):
     """
     Create a bi-directional HubSpot association between a company and a deal
     """
 
     logging.debug("adding deal to company association")
     try:
-        association = api_client.crm.associations.batch_api.create(
+        association = flask.g.api_client.crm.associations.batch_api.create(
             from_object_type="Companies",
             to_object_type="Deal",
             batch_input_public_association=BatchInputPublicAssociation(
@@ -442,13 +437,13 @@ def associate_company_to_deal(company_id, deal_id, api_client):
         flask.abort(500, description=error)
 
 
-def associate_contact_to_meeting(contact_id, meeting_id, api_client):
+def associate_contact_to_meeting(contact_id, meeting_id):
     """
     Create a bi-directional HubSpot association between a contact and a meeting
     """
     logging.debug("associate meeting with contact")
     try:
-        association = api_client.crm.associations.batch_api.create(
+        association = flask.g.api_client.crm.associations.batch_api.create(
             from_object_type="Contact",
             to_object_type="Meeting",
             batch_input_public_association=BatchInputPublicAssociation(
@@ -469,13 +464,13 @@ def associate_contact_to_meeting(contact_id, meeting_id, api_client):
         flask.abort(500, description=error)
 
 
-def associate_company_to_meeting(company_id, meeting_id, api_client):
+def associate_company_to_meeting(company_id, meeting_id):
     """
     Create a bi-directional HubSpot association between a company and a meeting
     """
     logging.debug("adding company association")
     try:
-        association = api_client.crm.associations.batch_api.create(
+        association = flask.g.api_client.crm.associations.batch_api.create(
             from_object_type="Companies",
             to_object_type="Meeting",
             batch_input_public_association=BatchInputPublicAssociation(
@@ -496,13 +491,13 @@ def associate_company_to_meeting(company_id, meeting_id, api_client):
         flask.abort(500, description=error)
 
 
-def associate_deal_to_meeting(deal_id, meeting_id, api_client):
+def associate_deal_to_meeting(deal_id, meeting_id):
     """
     Create a bi-directional HubSpot association between a deal and a meeting
     """
     logging.debug("adding deal association")
     try:
-        association = api_client.crm.associations.batch_api.create(
+        association = flask.g.api_client.crm.associations.batch_api.create(
             from_object_type="Deals",
             to_object_type="Meeting",
             batch_input_public_association=BatchInputPublicAssociation(
@@ -521,12 +516,12 @@ def associate_deal_to_meeting(deal_id, meeting_id, api_client):
         flask.abort(500, description=error)
 
 
-def get_owner_id(email, api_client):
+def get_owner_id(email):
     """
     Get the Hubspot user ID for an email
     """
     try:
-        owners = api_client.crm.owners.get_all()
+        owners = flask.g.api_client.crm.owners.get_all()
         owner = [o.id for o in owners if o.email == email][0]
     except hubspot.crm.owners.exceptions.ApiException as error:
         logging.error("loading owner ID failed, problem with API key?")
@@ -534,14 +529,14 @@ def get_owner_id(email, api_client):
     return owner
 
 
-def search_contact(email, api_client):
+def search_contact(email):
     """
     Search for a contact using the email
     :param email: email to search for (does not need to be primary)
     :return: dict of contact or None if not found
     """
     try:
-        contact = api_client.crm.contacts.basic_api.get_by_id(
+        contact = flask.g.api_client.crm.contacts.basic_api.get_by_id(
             email,
             id_property="email",
             associations=["Meetings", "Deals", "Companies"],
