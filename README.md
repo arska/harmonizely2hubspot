@@ -14,8 +14,70 @@ The application listens by default on tcp port 8080 and answers any requests to 
 
 This is an example JSON payload I used to test the integration using [YARC](https://chrome.google.com/webstore/detail/yet-another-rest-client/ehafadccdcdedbhcbddihehiodgcddpl?hl=en):
 
-```
-{"answers": [{"question_label": "Phone number", "question_type": "text", "value": "+41445455300"}, {"question_label": "Comment", "question_type": "textarea", "value": "This is a test"}], "canceled_at": null, "cancellation": null, "details": null, "end_date": "2022-02-18T07:45:00+00:00", "event_type": {"confirmation_page_type": "internal", "confirmation_page_url": null, "description": null, "duration": 45, "is_secret": false, "location": null, "location_label": null, "name": "60 min", "notification_type": "calendar", "pass_details_to_redirected_page": false, "position": 1, "slug": "60", "type": "regular"}, "invitee": {"email": "aarno.aukia@vshn.ch", "first_name": "Aarno", "full_name": "Aarno Aukia", "locale": "en", "phone_number": null, "timezone": "Europe/Zurich"}, "location": "https://vshn.zoom.us/j/1234567890", "notes": null, "payment": null, "pretty_canceled_at": null, "pretty_canceled_at_in_invitee_timezone": null, "pretty_scheduled_at": "Friday, February 18, 2022 08:00", "pretty_scheduled_at_in_invitee_timezone": "Friday, February 18, 2022 at 8:00 AM", "rescheduling": null, "scheduled_at": "2022-02-18T07:00:00+00:00", "state": "new", "uuid": "12345678-1234-1234-1234-12345678"}
+```json
+{
+  "answers": [
+    {
+      "question_label": "Phone number",
+      "question_type": "text",
+      "value": "+41445455300"
+    },
+    {
+      "question_label": "Comment",
+      "question_type": "textarea",
+      "value": "This is a test"
+    }
+  ],
+  "canceled_at": null,
+  "cancellation": null,
+  "details": null,
+  "end_date": "2022-02-18T07:45:00+00:00",
+  "event_type": {
+    "allow_cancel": true,
+    "allow_reschedule": true,
+    "calendar_as_availability": false,
+    "client_can_add_participants": true,
+    "confirmation_page_type": "internal",
+    "confirmation_page_url": null,
+    "description": null,
+    "duration": 25,
+    "duration_type": "fixed",
+    "is_secret": false,
+    "location": null,
+    "location_label": null,
+    "multiple_meeting": false,
+    "name": "30 min",
+    "notification_type": "calendar",
+    "pass_details_to_redirected_page": false,
+    "position": 3,
+    "slug": "30",
+    "type": "regular"
+  },
+  "invitee": {
+    "cancellation_policy": null,
+    "email": "aarno.aukia@vshn.ch",
+    "first_name": "Aarno",
+    "full_name": "Aarno Aukia",
+    "locale": "en",
+    "phone_number": null,
+    "timezone": "Europe/Zurich"
+  },
+  "location": "https://vshn.zoom.us/j/1234567890",
+  "location_type": "zoom",
+  "notes": null,
+  "participants": [
+    { "created_at": "2023-12-21T09:30:48+00:00", "email": "a@aukia.com" }
+  ],
+  "payment": null,
+  "pretty_canceled_at": null,
+  "pretty_canceled_at_in_invitee_timezone": null,
+  "pretty_scheduled_at": "Friday, February 18, 2022 08:00",
+  "pretty_scheduled_at_in_invitee_timezone": "Friday, February 18, 2022 at 8:00 AM",
+  "rescheduling": null,
+  "scheduled_at": "2022-02-18T07:00:00+00:00",
+  "state": "new",
+  "uuid": "12345678-1234-1234-1234-12345678"
+}
 ```
 
 ## Deploying
@@ -23,6 +85,7 @@ This is an example JSON payload I used to test the integration using [YARC](http
 The latest version from the main branch that passes the (very rudimentary) tests is automatically built and pushed as a docker container image to ghcr.io/arska/harmonizely2hubspot
 
 You can run the application thus using
+
 ```
 docker run -e HUBSPOT_ACCESS_TOKEN="pat-xx-xxxxxxxx-xxxx-xxxx..." -e HUBSPOT_USERS="user1@example.com" ghcr.io/arska/harmonizely2hubspot
 ```
@@ -33,6 +96,6 @@ My production runs on https://APPUiO.cloud, the Swiss Container Platform by http
 
 For each Harmonizely meeting type questions can be defined (and optionally marked as required). The following questions/answers are handled by harmonizely2hubspot
 
-* the first question containing the word "phone", "telefon", or "telephon" will be parsed as (international) phone number and added to the hubspot contact as phone number. Note this is parsed from a separate, manually created question instead of the built-in "require phone number" feature in Harmonizely because that does not work well with autocomplete for me.
-* the answer to the first question containing the word "titel" or "title" is appended to the hubspot meeting title.
-* the answer to the first question containing the word "comment", "kommentar", or "agenda" will be appended to the hubspot meeting body.
+- the first question containing the word "phone", "telefon", or "telephon" will be parsed as (international) phone number and added to the hubspot contact as phone number. Note this is parsed from a separate, manually created question instead of the built-in "require phone number" feature in Harmonizely because that does not work well with autocomplete for me.
+- the answer to the first question containing the word "titel" or "title" is appended to the hubspot meeting title.
+- the answer to the first question containing the word "comment", "kommentar", or "agenda" will be appended to the hubspot meeting body.

@@ -1,0 +1,63 @@
+{
+  "answers": [
+    {
+      "question_label": "Phone number",
+      "question_type": "text",
+      "value": "+41445455300"
+    },
+    {
+      "question_label": "Comment",
+      "question_type": "textarea",
+      "value": "This is a test"
+    }
+  ],
+  "canceled_at": null,
+  "cancellation": null,
+  "details": null,
+  "end_date": "2022-02-18T07:45:00+00:00",
+  "event_type": {
+    "allow_cancel": true,
+    "allow_reschedule": true,
+    "calendar_as_availability": false,
+    "client_can_add_participants": true,
+    "confirmation_page_type": "internal",
+    "confirmation_page_url": null,
+    "description": null,
+    "duration": 25,
+    "duration_type": "fixed",
+    "is_secret": false,
+    "location": null,
+    "location_label": null,
+    "multiple_meeting": false,
+    "name": "30 min",
+    "notification_type": "calendar",
+    "pass_details_to_redirected_page": false,
+    "position": 3,
+    "slug": "30",
+    "type": "regular"
+  },
+  "invitee": {
+    "cancellation_policy": null,
+    "email": "aarno.aukia@vshn.ch",
+    "first_name": "Aarno",
+    "full_name": "Aarno Aukia",
+    "locale": "en",
+    "phone_number": null,
+    "timezone": "Europe/Zurich"
+  },
+  "location": "https://vshn.zoom.us/j/1234567890",
+  "location_type": "zoom",
+  "notes": null,
+  "participants": [
+    { "created_at": "2023-12-21T09:30:48+00:00", "email": "a@aukia.com" }
+  ],
+  "payment": null,
+  "pretty_canceled_at": null,
+  "pretty_canceled_at_in_invitee_timezone": null,
+  "pretty_scheduled_at": "Friday, February 18, 2022 08:00",
+  "pretty_scheduled_at_in_invitee_timezone": "Friday, February 18, 2022 at 8:00 AM",
+  "rescheduling": null,
+  "scheduled_at": "2022-02-18T07:00:00+00:00",
+  "state": "new",
+  "uuid": "12345678-1234-1234-1234-12345678"
+}
