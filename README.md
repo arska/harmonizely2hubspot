@@ -8,7 +8,7 @@ Example:
 HUBSPOT_ACCESS_TOKEN="pat-xx-xxxxxxxx-xxxx-xxxx..."
 HUBSPOT_USERS="user1@example.com,user2@example.com"
 
-The application listens by default on tcp port 8080 and answers any requests to / with "OK" (e.g. for liveness probes). The webhook requests need to be sent to /user1@example.com, and the created objects (contacts, deals, meetings) will then be owned by the user with the email address "user1@example.com".
+The application listens by default on TCP port 8080 and answers any requests to/with "OK" (e.g. for liveness probes). The webhook requests need to be sent to /user1@example.com, and the created objects (contacts, deals, meetings) will then be owned by the user with the email address "user1@example.com".
 
 ## Testing in development
 
@@ -84,7 +84,7 @@ This is an example JSON payload I used to test the integration using [YARC](http
 
 The latest version from the main branch that passes the (very rudimentary) tests is automatically built and pushed as a docker container image to ghcr.io/arska/harmonizely2hubspot
 
-You can run the application thus using
+You can run the application using
 
 ```
 docker run -e HUBSPOT_ACCESS_TOKEN="pat-xx-xxxxxxxx-xxxx-xxxx..." -e HUBSPOT_USERS="user1@example.com" ghcr.io/arska/harmonizely2hubspot
