@@ -201,11 +201,21 @@ def webhook(path):
     if payload is None:
         flask.abort(400, description="no payload")
 
-    first_name, last_name = parse_name(payload["invitee"]["full_name"])
     flask.g.api_client = hubspot.HubSpot(access_token=CONFIG["token"])
 
+    process_payload(user_email=path, payload=payload)
+
+    return "OK"
+
+
+def process_payload(user_email, payload):  # pylint: disable=too-many-branches
+    """
+    Process the payload for the hubspot user specified by email address
+    """
+    first_name, last_name = parse_name(payload["invitee"]["full_name"])
+
     # get the Hubspot user id for the email address specified as the URL path
-    owner = get_owner_id(email=path)
+    owner = get_owner_id(email=user_email)
 
     try:
         phone_number = [
@@ -227,6 +237,13 @@ def webhook(path):
         phone_number,
     )
 
+    # create meeting participants contacts in hubspot
+    additional_participants = []
+    for participant in payload.get("participants", []):
+        additional_participants.append(
+            search_or_create_contact(participant["email"], owner)
+        )
+
     #  create new deal if the contact has no deals at all
     if not contact.associations or not contact.associations.get("deals", False):
         try:
@@ -244,24 +261,27 @@ def webhook(path):
                 "hubspot_owner_id": owner,
                 "pipeline": "default",
             }
-            newdeal = flask.g.api_client.crm.deals.basic_api.create(
+            new_deal = flask.g.api_client.crm.deals.basic_api.create(
                 SimplePublicObjectInput(properties=properties)
             )
-            logging.debug("created deal:\n%s", pprint.pformat(newdeal))
+            logging.debug("created deal:\n%s", pprint.pformat(new_deal))
         except ApiException as error:
             logging.error("Exception when creating deal: %s\n", error)
             flask.abort(500, description=error)
 
         # add new deal to contact
 
-        associate_contact_to_deal(contact_id=contact.id, deal_id=newdeal.id)
+        associate_contact_to_deal(contact_id=contact.id, deal_id=new_deal.id)
+
+        for participant in additional_participants:
+            associate_contact_to_deal(contact_id=participant.id, deal_id=new_deal.id)
 
         if contact.associations and contact.associations.get("companies", False):
             # if the contact has a company associate the deal with it
 
             associate_company_to_deal(
                 company_id=contact.associations["companies"].results[0].id,
-                deal_id=newdeal.id,
+                deal_id=new_deal.id,
             )
 
     # get meetings for contact
@@ -329,8 +349,11 @@ def webhook(path):
         flask.abort(500, description=error)
 
     # associate new meeting with the contact
-
     associate_contact_to_meeting(contact_id=contact.id, meeting_id=meeting.id)
+
+    # associate participants to the meeting
+    for participant in additional_participants:
+        associate_contact_to_meeting(contact_id=participant.id, meeting_id=meeting.id)
 
     if contact.associations and contact.associations.get("companies", False):
         # if the contact has a company associate the meeting with it
@@ -340,14 +363,17 @@ def webhook(path):
             meeting_id=meeting.id,
         )
 
-    #  either the contact has existing deals or we just created one above
+    # associate the meeting to the deal
+    # either the contact has existing deals or we just created one above
     if contact.associations and contact.associations.get("deals", False):
-        newdeal = find_first_non_closed_deal(contact.associations["deals"].results)
+        new_deal = find_first_non_closed_deal(contact.associations["deals"].results)
 
         # if the contact has a deal associate the meeting with it
-        associate_deal_to_meeting(deal_id=newdeal.id, meeting_id=meeting.id)
+        associate_deal_to_meeting(deal_id=new_deal.id, meeting_id=meeting.id)
 
-    return "OK"
+        # associate participants to the existing deal
+        for participant in additional_participants:
+            associate_contact_to_deal(contact_id=participant.id, deal_id=new_deal.id)
 
 
 def find_first_non_closed_deal(deals):
