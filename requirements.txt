@@ -18,7 +18,7 @@ flask==3.0.2
     # via
     #   -r requirements.in
     #   sentry-sdk
-hubspot-api-client==8.2.1
+hubspot-api-client==9.0.0
     # via -r requirements.in
 itsdangerous==2.1.2
     # via flask
