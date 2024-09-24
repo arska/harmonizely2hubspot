@@ -547,8 +547,13 @@ def get_owner_id(email):
     Get the Hubspot user ID for an email
     """
     try:
-        owners = flask.g.api_client.crm.owners.get_all()
-        owner = [o.id for o in owners if o.email == email][0]
+        owner = (
+            flask.g.api_client.crm.owners.owners_api.get_page(
+                email=email, limit=100, archived=False
+            )
+            .results[0]
+            .id
+        )
     except hubspot.crm.owners.exceptions.ApiException as error:
         logging.error("loading owner ID failed, problem with API key?")
         flask.abort(500, description=error)

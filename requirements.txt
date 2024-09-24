@@ -8,7 +8,7 @@ blinker==1.8.2
     # via
     #   flask
     #   sentry-sdk
-certifi==2023.11.17
+certifi==2024.8.30
     # via
     #   hubspot-api-client
     #   sentry-sdk
@@ -18,7 +18,7 @@ flask==3.0.3
     # via
     #   -r requirements.in
     #   sentry-sdk
-hubspot-api-client==8.2.1
+hubspot-api-client==9.0.0
     # via -r requirements.in
 itsdangerous==2.2.0
     # via flask
@@ -37,7 +37,7 @@ python-dateutil==2.9.0.post0
     # via hubspot-api-client
 python-dotenv==1.0.1
     # via -r requirements.in
-sentry-sdk[flask]==1.45.0
+sentry-sdk[flask]==2.14.0
     # via -r requirements.in
 six==1.16.0
     # via
