@@ -9,6 +9,9 @@ LABEL org.opencontainers.image.authors="Aarno Aukia <aarno.aukia@vshn.ch>"
 # directory to install the app inside the container
 WORKDIR /usr/src/app
 
+# https://stackoverflow.com/a/10538412
+RUN pip install --upgrade setuptools
+
 # install python dependencies, this will be cached if the requirements.txt file does not change
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
