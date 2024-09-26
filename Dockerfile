@@ -9,6 +9,7 @@ LABEL org.opencontainers.image.authors="Aarno Aukia <aarno.aukia@vshn.ch>"
 # directory to install the app inside the container
 WORKDIR /usr/src/app
 
+# https://github.com/HubSpot/hubspot-api-python/issues/303
 # https://stackoverflow.com/a/10538412
 RUN pip install --upgrade setuptools
 
