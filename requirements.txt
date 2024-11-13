@@ -14,7 +14,7 @@ certifi==2024.8.30
     #   sentry-sdk
 click==8.1.7
     # via flask
-flask==3.0.3
+flask==3.1.0
     # via
     #   -r requirements.in
     #   sentry-sdk
