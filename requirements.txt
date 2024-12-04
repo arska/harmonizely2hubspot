@@ -39,7 +39,7 @@ python-dotenv==1.0.1
     # via -r requirements.in
 sentry-sdk[flask]==2.19.0
     # via -r requirements.in
-six==1.16.0
+six==1.17.0
     # via
     #   hubspot-api-client
     #   python-dateutil
