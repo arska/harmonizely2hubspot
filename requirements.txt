@@ -35,7 +35,7 @@ phonenumbers==8.13.55
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via hubspot-api-client
-python-dotenv==1.0.1
+python-dotenv==1.1.0
     # via -r requirements.in
 sentry-sdk[flask]==2.24.1
     # via -r requirements.in
