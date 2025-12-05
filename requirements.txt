@@ -43,7 +43,7 @@ six==1.17.0
     # via
     #   hubspot-api-client
     #   python-dateutil
-urllib3==2.5.0
+urllib3==2.6.0
     # via
     #   hubspot-api-client
     #   sentry-sdk
