@@ -34,5 +34,7 @@ def pylint(session: nox.Session) -> None:
 @nox.session
 def tests(session: nox.Session) -> None:
     """Run the test suite."""
-    session.install("pytest", *_project_deps())
-    session.run("pytest")
+    session.install("pytest", "pytest-cov", *_project_deps())
+    session.run(
+        "pytest", "--cov=app", "--cov-report=term", "--cov-report=xml:coverage.xml"
+    )

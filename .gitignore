@@ -4,3 +4,7 @@ venv/
 .pytest_cache
 cache
 __pycache__/
+*.egg-info/
+dist/
+.coverage
+coverage.xml

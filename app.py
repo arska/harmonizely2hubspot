@@ -324,7 +324,7 @@ def process_payload(user_email, payload):  # pylint: disable=too-many-branches
     try:
         # https://developers.hubspot.com/docs/api/crm/meetings
         properties = {
-            "hs_timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "hs_timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
             "hubspot_owner_id": owner,
             "hs_meeting_title": payload["event_type"]["name"]
             + (": " + meeting_title if meeting_title else ""),

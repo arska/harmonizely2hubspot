@@ -9,7 +9,7 @@ LABEL org.opencontainers.image.authors="Aarno Aukia <aarno.aukia@vshn.ch>"
 # directory to install the app inside the container
 WORKDIR /usr/src/app
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.10 /uv /bin/uv
 
 # install python dependencies, this will be cached if pyproject.toml does not change
 COPY pyproject.toml uv.lock ./
