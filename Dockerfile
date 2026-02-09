@@ -11,6 +11,9 @@ WORKDIR /usr/src/app
 
 COPY --from=ghcr.io/astral-sh/uv:0.10 /uv /bin/uv
 
+# use the venv python for all subsequent commands
+ENV PATH="/usr/src/app/.venv/bin:$PATH"
+
 # install python dependencies, this will be cached if pyproject.toml does not change
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project --no-editable
