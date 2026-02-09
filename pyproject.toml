@@ -2,7 +2,7 @@
 name = "harmonizely2hubspot"
 version = "0.1.0"
 description = "Harmonizely/Simplymeet.me webhook to HubSpot CRM bridge"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "flask",
     "hubspot-api-client",
