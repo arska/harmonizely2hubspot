@@ -7,7 +7,7 @@ import nox
 
 nox.options.default_venv_backend = "uv"
 nox.options.reuse_venv = "yes"
-nox.options.sessions = ["ruff", "pylint"]
+nox.options.sessions = ["ruff", "pylint", "tests"]
 
 
 def _project_deps() -> list[str]:
