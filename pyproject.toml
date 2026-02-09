@@ -1,0 +1,40 @@
+[project]
+name = "harmonizely2hubspot"
+version = "0.1.0"
+description = "Harmonizely/Simplymeet.me webhook to HubSpot CRM bridge"
+requires-python = ">=3.11"
+dependencies = [
+    "flask",
+    "hubspot-api-client",
+    "python-dotenv",
+    "nameparser",
+    "sentry-sdk[flask]",
+    "phonenumbers",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "pylint",
+]
+
+[tool.ruff]
+line-length = 88
+exclude = [".nox", "venv", ".git", "__pycache__"]
+
+[tool.ruff.lint]
+select = [
+    "F",      # pyflakes
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "N",      # pep8-naming
+    "B",      # flake8-bugbear
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.pylint.messages_control]
+disable = ["pointless-string-statement"]

@@ -9,13 +9,11 @@ LABEL org.opencontainers.image.authors="Aarno Aukia <aarno.aukia@vshn.ch>"
 # directory to install the app inside the container
 WORKDIR /usr/src/app
 
-# https://github.com/HubSpot/hubspot-api-python/issues/303
-# https://stackoverflow.com/a/10538412
-RUN pip install --upgrade setuptools
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# install python dependencies, this will be cached if the requirements.txt file does not change
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# install python dependencies, this will be cached if pyproject.toml does not change
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project --no-editable
 
 # copy application source code into container
 COPY app.py .

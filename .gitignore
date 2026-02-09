@@ -1,5 +1,6 @@
 venv/
 .env
-.tox/
+.nox/
 .pytest_cache
 cache
+__pycache__/
