@@ -7,7 +7,7 @@ import nox
 
 nox.options.default_venv_backend = "uv"
 nox.options.reuse_venv = "yes"
-nox.options.sessions = ["ruff", "pylint", "tests"]
+nox.options.sessions = ["ruff", "pylint", "tests", "docker"]
 
 
 def _project_deps() -> list[str]:
@@ -37,4 +37,20 @@ def tests(session: nox.Session) -> None:
     session.install("pytest", "pytest-cov", *_project_deps())
     session.run(
         "pytest", "--cov=app", "--cov-report=term", "--cov-report=xml:coverage.xml"
+    )
+
+
+@nox.session(venv_backend="none")
+def docker(session: nox.Session) -> None:
+    """Build and smoke-test the Docker image."""
+    session.run("docker", "build", "-t", "harmonizely2hubspot:test", ".", external=True)
+    session.run(
+        "docker",
+        "run",
+        "--rm",
+        "harmonizely2hubspot:test",
+        "python",
+        "-c",
+        "import app",
+        external=True,
     )
