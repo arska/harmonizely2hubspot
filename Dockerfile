@@ -9,7 +9,7 @@ LABEL org.opencontainers.image.authors="Aarno Aukia <aarno.aukia@vshn.ch>"
 # directory to install the app inside the container
 WORKDIR /usr/src/app
 
-COPY --from=ghcr.io/astral-sh/uv:0.10 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /bin/uv
 
 # use the venv python for all subsequent commands
 ENV PATH="/usr/src/app/.venv/bin:$PATH"
